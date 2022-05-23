@@ -27,9 +27,10 @@ function preload() {
     this.load.image('enemy', 'assets/Enemy3.png');
     this.load.image('plasma', 'assets/Plasma.png'); */
 
-    //this.load.tilemap('basement', 'assets/Basement-1.json', null, Phaser.Tilemap.TILED_JSON);
+
+    //this.load.tilemap('basement', 'assets/Basement-1.json', null, game.Tilemap.TILED_JSON);
     this.load.image('tiles', 'assets/PC Computer - The Binding of Isaac Rebirth - Basement.png');
-    this.load.tilemapTiledJSON('basement', 'assets/Basement-1.json');
+    this.load.tilemapTiledJSON('basement', 'assets/Basement-18.json');
 
 }
 
@@ -48,10 +49,10 @@ function create() {
     //console.log(this.make.tilemap({ key: 'basement', tileWidth: 52, tileHeight: 52 }))
 
     const map = this.make.tilemap({ key: "basement", tileWidth: 52, tileHeight: 52 });
-    //const tileset = map.addTilesetImage('Basement', 'tiles');
+    const tileset = map.addTilesetImage('Basement-18', 'tiles');
 
-    //map.createStaticLayer('Ground', tileset);
-    //map.createStaticLayer('Walls', tileset);
+    map.createStaticLayer('Ground', tileset);
+    map.createStaticLayer('Walls', tileset);
 }
 
 function update() {
