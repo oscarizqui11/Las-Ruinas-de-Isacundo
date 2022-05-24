@@ -2,12 +2,13 @@ var config = {
     type: Phaser.AUTO,
     width: 1080,
     height: 720,
-    /* physiscs: {
+    physics: {
         default: 'arcade',
         arcade: {
-            gravity: { y: 200 }
+            gravity: { y: 0 },
+            debug: true,
         }
-    }, */
+    },
     scene: {
         preload: preload,
         create: create,
@@ -27,10 +28,11 @@ function preload() {
     this.load.image('enemy', 'assets/Enemy3.png');
     this.load.image('plasma', 'assets/Plasma.png'); */
 
-
-    //this.load.tilemap('basement', 'assets/Basement-1.json', null, game.Tilemap.TILED_JSON);
     this.load.image('tiles', 'assets/PC Computer - The Binding of Isaac Rebirth - Basement.png');
     this.load.tilemapTiledJSON('basement', 'assets/Basement-18.json');
+    animat = this.load.spritesheet('Isaac', './assets/IsaacHead.png', { frameWidth: 28, frameHeigth: 28 });
+
+    console.log(animat);
 
 }
 
@@ -40,49 +42,123 @@ function create() {
     shotsList = this.add.group();
 
     CreateBackground.call(this);
-    SetKeys.call(this);
     CreateCar.call(this);
-    GenerateEnemy.call(this);
+    GenerateEnemy.call(this);*/
+    //this.input.on('pointerdown', treatClick);
+    
+    
+    SetKeys.call(this);
 
-    this.input.on('pointerdown', treatClick); */
-
-    //console.log(this.make.tilemap({ key: 'basement', tileWidth: 52, tileHeight: 52 }))
+    // CREACION DE LA SALA
 
     const map = this.make.tilemap({ key: "basement", tileWidth: 52, tileHeight: 52 });
     const tileset = map.addTilesetImage('Basement-18', 'tiles');
+    
+    layerGround = map.createLayer('Ground', tileset);
+    layerWalls = map.createLayer('Walls', tileset);
+    
+    layerGround.scaleX = 2;
+    layerWalls.scaleX = 2;
+    layerGround.scaleY = 2;
+    layerWalls.scaleY = 2;
 
-    map.createStaticLayer('Ground', tileset);
-    map.createStaticLayer('Walls', tileset);
+    layerWalls.setCollisionByExclusion(-1, true);
+
+    this.physics.add.collider(
+        layerWalls,
+        this.player
+    );
+
+    //CREACION DEL ISAAC
+
+    console.log(this.physics);
+
+    player = this.physics.add.sprite(300, 450, 'Isaac');
+
+    player.speed = 160;
+    
+    player.scaleX = 2;
+    player.scaleY = 2;
+    
+    this.anims.create({
+        key: 'down-shot',
+        frames: this.anims.generateFrameNumbers('Isaac', { start: 0, end: 1 }),
+        frameRate: 2,
+        repeat: -1
+    });
+    this.anims.create({
+        key: 'right-shot',
+        frames: this.anims.generateFrameNumbers('Isaac', { start: 2, end: 3 }),
+        frameRate: 2,
+        repeat: -1
+    });
+    this.anims.create({
+        key: 'up-shot',
+        frames: this.anims.generateFrameNumbers('Isaac', { start: 4, end: 5 }),
+        frameRate: 2,
+        repeat: -1
+    });
+    this.anims.create({
+        key: 'left-shot',
+        frames: this.anims.generateFrameNumbers('Isaac', { start: 6, end: 7 }),
+        frameRate: 2,
+        repeat: -1
+    });
+
+    this.anims.create({
+        key: 'turn',
+        frames: [{ key: 'Isaac', frame: 1 }],
+        frameRate: 2
+    });
+    player.anims.play('left-shot');
+    
 }
 
 function update() {
+    
+    this.physics.collide(player, layerWalls);
 
-    /* time++;
-
+    if (keyW.isDown) {
+        player.anims.play('up-shot');
+        player.setVelocityY(-player.speed);
+        //UpdatePlayerGun.call(this);
+    }
     if (keyA.isDown) {
-        playerCar.angle -= 2;
-        UpdatePlayerGun.call(this);
+        player.anims.play('left-shot');
+        player.setVelocityX(-player.speed);
+        //UpdatePlayerGun.call(this);
     }
-
+    if (keyS.isDown) {
+        player.anims.play('down-shot');
+        player.setVelocityY(player.speed);
+        //UpdatePlayerGun.call(this);
+    }
     if (keyD.isDown) {
-        playerCar.angle += 2;
-        UpdatePlayerGun.call(this);
+        player.anims.play('right-shot');
+        player.setVelocityX(player.speed);
+        //UpdatePlayerGun.call(this);
     }
-
+    if(keyW.isUp && keyS.isUp)
+    {
+        player.setVelocityY(0);
+    }
+    if(keyA.isUp && keyD.isUp)
+    {
+        player.setVelocityX(0);
+    }
     if (keySpace.isDown) {
-        Shoot.call(this);
+        //Shoot.call(this);
     }
 
-    if (time >= 60) {
+    /* if (time >= 60) {
         time = 0;
-        GenerateEnemy.call(this);
-    }
+    } */
 
-    MoveEnemies.call(this);
-    MoveShots.call(this); */
+    //MoveEnemies.call(this);
+    //MoveShots.call(this);
 
 }
-/* 
+
 function SetKeys() {
     keyW = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
     keyA = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
@@ -90,7 +166,7 @@ function SetKeys() {
     keyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
     keySpace = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 }
-
+/*
 function treatClick(pointer) {
     playerCar.x = pointer.x;
     playerCar.y = pointer.y;
