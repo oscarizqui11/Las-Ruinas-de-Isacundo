@@ -29,11 +29,10 @@ function preload() {
     this.load.image('plasma', 'assets/Plasma.png'); */
 
     this.load.image('tiles', 'assets/PC Computer - The Binding of Isaac Rebirth - Basement.png');
-    this.load.tilemapTiledJSON('basement', 'assets/Basement-18.json');
-    animat = this.load.spritesheet('Isaac', './assets/IsaacHead.png', { frameWidth: 28, frameHeigth: 28 });
-
-    console.log(animat);
-
+    this.load.tilemapTiledJSON('basement', 'assets/Basement-18-2.json');
+    this.load.spritesheet('IsaacHead', './assets/IsaacHead.png', { frameWidth: 28, frameHeigth: 28 });
+    this.load.spritesheet('IsaacBodyVer', './assets/IsaacBodyVer.png', { frameWidth: 18, frameHeigth: 18 });
+    this.load.spritesheet('IsaacBodyHor', './assets/IsaacBodyHor.png', { frameWidth: 18, frameHeigth: 18 });
 }
 
 function create() {
@@ -71,72 +70,80 @@ function create() {
 
     //CREACION DEL ISAAC
 
-    console.log(this.physics);
+    console.log(this.physics.add);
 
-    player = this.physics.add.sprite(300, 450, 'Isaac');
-
-    player.speed = 160;
+    //player = this.physics.add;
+    
+    
+    player = this.physics.add.sprite(300, 450, 'IsaacBodyVer');
+    player.body.setSize(18, 14);
+    player.body.offset.y = -1;
+    
+    player.head = player.scene.add.sprite(player.x, player.y - 30, 'IsaacHead');
+    console.log(player.head);
+    
+    player.speed = 180;
     
     player.scaleX = 2;
     player.scaleY = 2;
+    player.head.scaleX = player.scaleX;
+    player.head.scaleY = player.scaleY;
     
     this.anims.create({
+        key: 'ver-walk',
+        frames: this.anims.generateFrameNumbers('IsaacBodyVer', { start: 0, end: 9 }),
+        frameRate: 10,
+        repeat: -1
+    });
+    this.anims.create({
+        key: 'hor-walk',
+        frames: this.anims.generateFrameNumbers('IsaacBodyHor', { start: 0, end: 9 }),
+        frameRate: 10,
+        repeat: -1
+    });
+
+    this.anims.create({
         key: 'down-shot',
-        frames: this.anims.generateFrameNumbers('Isaac', { start: 0, end: 1 }),
+        frames: this.anims.generateFrameNumbers('IsaacHead', { start: 0, end: 1 }),
         frameRate: 2,
         repeat: -1
     });
     this.anims.create({
         key: 'right-shot',
-        frames: this.anims.generateFrameNumbers('Isaac', { start: 2, end: 3 }),
+        frames: this.anims.generateFrameNumbers('IsaacHead', { start: 2, end: 3 }),
         frameRate: 2,
         repeat: -1
     });
     this.anims.create({
         key: 'up-shot',
-        frames: this.anims.generateFrameNumbers('Isaac', { start: 4, end: 5 }),
+        frames: this.anims.generateFrameNumbers('IsaacHead', { start: 4, end: 5 }),
         frameRate: 2,
         repeat: -1
     });
     this.anims.create({
         key: 'left-shot',
-        frames: this.anims.generateFrameNumbers('Isaac', { start: 6, end: 7 }),
+        frames: this.anims.generateFrameNumbers('IsaacHead', { start: 6, end: 7 }),
         frameRate: 2,
         repeat: -1
     });
 
     this.anims.create({
         key: 'turn',
-        frames: [{ key: 'Isaac', frame: 1 }],
+        frames: [{ key: 'IsaacHead', frame: 1 }],
         frameRate: 2
     });
-    player.anims.play('left-shot');
-    
+
+    resetIsaacAnims();
+
 }
 
 function update() {
     
     this.physics.collide(player, layerWalls);
 
-    if (keyW.isDown) {
-        player.anims.play('up-shot');
-        player.setVelocityY(-player.speed);
-        //UpdatePlayerGun.call(this);
-    }
-    if (keyA.isDown) {
-        player.anims.play('left-shot');
-        player.setVelocityX(-player.speed);
-        //UpdatePlayerGun.call(this);
-    }
-    if (keyS.isDown) {
-        player.anims.play('down-shot');
-        player.setVelocityY(player.speed);
-        //UpdatePlayerGun.call(this);
-    }
-    if (keyD.isDown) {
-        player.anims.play('right-shot');
-        player.setVelocityX(player.speed);
-        //UpdatePlayerGun.call(this);
+    if(keyW.isUp && keyS.isUp && keyA.isUp && keyD.isUp)
+    {
+        resetIsaacAnims();
     }
     if(keyW.isUp && keyS.isUp)
     {
@@ -146,9 +153,56 @@ function update() {
     {
         player.setVelocityX(0);
     }
+
+    console.log(player.anims.isPlaying)
+
+    if (keyW.isDown) {
+        if(player.anims.currentAnim.key != 'ver-walk' || !player.anims.isPlaying)
+        {
+            player.anims.play('ver-walk');
+            player.head.anims.play('up-shot');
+            player.setVelocityY(-player.speed);
+        }
+        //UpdatePlayerGun.call(this);
+    }
+    if (keyA.isDown) {
+        if(player.anims.currentAnim.key != 'hor-walk')
+        {
+            player.anims.play('hor-walk');
+            player.head.anims.play('left-shot');
+            player.flipX = true;
+        }
+
+        player.setVelocityX(-player.speed);
+        //UpdatePlayerGun.call(this);
+    }
+    if (keyS.isDown) {
+        if(player.anims.currentAnim.key != 'ver-walk' || !player.anims.isPlaying)
+        {
+            player.anims.play('ver-walk');
+            player.head.anims.play('down-shot');
+            player.setVelocityY(player.speed);
+        }
+        //UpdatePlayerGun.call(this);
+    }
+    if (keyD.isDown) {
+        console.log(player.anims.currentAnim.key)
+        if(player.anims.currentAnim.key != 'hor-walk')
+        {
+            player.anims.play('hor-walk');
+            player.head.anims.play('right-shot');
+            player.flipX = false;
+        }
+
+        player.setVelocityX(player.speed);
+        //UpdatePlayerGun.call(this);
+    }
     if (keySpace.isDown) {
         //Shoot.call(this);
     }
+
+    player.head.x = player.x;
+    player.head.y = player.y - 30;
 
     /* if (time >= 60) {
         time = 0;
@@ -166,6 +220,15 @@ function SetKeys() {
     keyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
     keySpace = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 }
+
+function resetIsaacAnims()
+{
+    player.head.anims.play('down-shot');
+    player.head.anims.pause(player.head.anims.currentAnim.frames[0]);
+    player.anims.play('ver-walk');
+    player.anims.pause(player.anims.currentAnim.frames[0]);  
+}
+
 /*
 function treatClick(pointer) {
     playerCar.x = pointer.x;
