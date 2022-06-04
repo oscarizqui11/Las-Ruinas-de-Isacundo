@@ -16,8 +16,28 @@ var config = {
     }
 };
 
+class IsaacState {
+
+    static IDLE = new IsaacState("idle");
+    static UP = new IsaacState("up");
+    static DOWN = new IsaacState("down");
+    static LEFT = new IsaacState("left");
+    static RIGHT = new IsaacState("right");
+
+    constructor(name) {
+        this.name = name;
+    }
+}
+
 var game = new Phaser.Game(config);
 var time = 0;
+var bodyState = IsaacState.IDLE;
+var headState = IsaacState.IDLE;
+
+var prevShotUp = false;
+var prevShotDown = false;
+var prevShotLeft = false;
+var prevShotRight = false;
 
 
 function preload() {
@@ -44,18 +64,18 @@ function create() {
     CreateCar.call(this);
     GenerateEnemy.call(this);*/
     //this.input.on('pointerdown', treatClick);
-    
-    
+
+
     SetKeys.call(this);
 
     // CREACION DE LA SALA
 
     const map = this.make.tilemap({ key: "basement", tileWidth: 52, tileHeight: 52 });
     const tileset = map.addTilesetImage('Basement-18', 'tiles');
-    
+
     layerGround = map.createLayer('Ground', tileset);
     layerWalls = map.createLayer('Walls', tileset);
-    
+
     layerGround.scaleX = 2;
     layerWalls.scaleX = 2;
     layerGround.scaleY = 2;
@@ -72,23 +92,23 @@ function create() {
 
     console.log(this.physics.add);
 
-    //player = this.physics.add;
-    
-    
+    player = this.physics.add;
+
+
     player = this.physics.add.sprite(300, 450, 'IsaacBodyVer');
     player.body.setSize(18, 14);
     player.body.offset.y = -1;
-    
+
     player.head = player.scene.add.sprite(player.x, player.y - 30, 'IsaacHead');
     console.log(player.head);
-    
+
     player.speed = 180;
-    
+
     player.scaleX = 2;
     player.scaleY = 2;
     player.head.scaleX = player.scaleX;
     player.head.scaleY = player.scaleY;
-    
+
     this.anims.create({
         key: 'ver-walk',
         frames: this.anims.generateFrameNumbers('IsaacBodyVer', { start: 0, end: 9 }),
@@ -138,65 +158,17 @@ function create() {
 }
 
 function update() {
-    
+
     this.physics.collide(player, layerWalls);
 
-    if(keyW.isUp && keyS.isUp && keyA.isUp && keyD.isUp)
-    {
-        resetIsaacAnims();
-    }
-    if(keyW.isUp && keyS.isUp)
-    {
-        player.setVelocityY(0);
-    }
-    if(keyA.isUp && keyD.isUp)
-    {
-        player.setVelocityX(0);
-    }
+    UpdatePlayerMovement();
+    UpdatePrevShotInputs();
+    UpdatePlayerShooting();
 
-    console.log(player.anims.isPlaying)
 
-    if (keyW.isDown) {
-        if(player.anims.currentAnim.key != 'ver-walk' || !player.anims.isPlaying)
-        {
-            player.anims.play('ver-walk');
-            player.head.anims.play('up-shot');
-            player.setVelocityY(-player.speed);
-        }
-        //UpdatePlayerGun.call(this);
-    }
-    if (keyA.isDown) {
-        if(player.anims.currentAnim.key != 'hor-walk')
-        {
-            player.anims.play('hor-walk');
-            player.head.anims.play('left-shot');
-            player.flipX = true;
-        }
 
-        player.setVelocityX(-player.speed);
-        //UpdatePlayerGun.call(this);
-    }
-    if (keyS.isDown) {
-        if(player.anims.currentAnim.key != 'ver-walk' || !player.anims.isPlaying)
-        {
-            player.anims.play('ver-walk');
-            player.head.anims.play('down-shot');
-            player.setVelocityY(player.speed);
-        }
-        //UpdatePlayerGun.call(this);
-    }
-    if (keyD.isDown) {
-        console.log(player.anims.currentAnim.key)
-        if(player.anims.currentAnim.key != 'hor-walk')
-        {
-            player.anims.play('hor-walk');
-            player.head.anims.play('right-shot');
-            player.flipX = false;
-        }
+    //console.log(bodyState);
 
-        player.setVelocityX(player.speed);
-        //UpdatePlayerGun.call(this);
-    }
     if (keySpace.isDown) {
         //Shoot.call(this);
     }
@@ -218,15 +190,287 @@ function SetKeys() {
     keyA = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
     keyS = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
     keyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+    keyUp = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
+    keyDown = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
+    keyLeft = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT);
+    keyRight = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
     keySpace = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 }
 
-function resetIsaacAnims()
-{
-    player.head.anims.play('down-shot');
-    player.head.anims.pause(player.head.anims.currentAnim.frames[0]);
+function resetIsaacAnims() {
+    if (headState == IsaacState.IDLE) {
+        player.head.anims.play('down-shot');
+        player.head.anims.pause(player.head.anims.currentAnim.frames[0]);
+    }
     player.anims.play('ver-walk');
-    player.anims.pause(player.anims.currentAnim.frames[0]);  
+    player.anims.pause(player.anims.currentAnim.frames[0]);
+}
+
+function UpdatePlayerMovement() {
+
+    switch (bodyState) {
+
+        case IsaacState.IDLE:
+            if (keyW.isDown && !keyS.isDown) {
+                bodyState = IsaacState.UP;
+            }
+            else if (keyS.isDown && !keyW.isDown) {
+                bodyState = IsaacState.DOWN;
+            }
+            else if (keyA.isDown && !keyD.isDown) {
+                bodyState = IsaacState.LEFT;
+            }
+            else if (keyD.isDown && !keyA.isDown) {
+                bodyState = IsaacState.RIGHT;
+            }
+            resetIsaacAnims();
+            player.setVelocityY(0);
+            player.setVelocityX(0);
+            break;
+
+        case IsaacState.UP:
+            if (keyW.isUp) {
+                bodyState = IsaacState.IDLE;
+            }
+            else if (keyS.isDown) {
+                bodyState = IsaacState.IDLE;
+            }
+            if (keyA.isDown) {
+                player.setVelocityX(-player.speed);
+            }
+            else if (keyD.isDown) {
+                player.setVelocityX(player.speed);
+            }
+            if (keyA.isUp && keyD.isUp || keyA.isDown && keyD.isDown) {
+                player.setVelocityX(0);
+            }
+            if (player.anims.currentAnim.key != 'ver-walk' || !player.anims.isPlaying) {
+                player.anims.play('ver-walk');
+                player.setVelocityY(-player.speed);
+                player.head.anims.play('up-shot');
+                player.head.anims.pause(player.head.anims.currentAnim.frames[0]);
+            }
+            break;
+
+        case IsaacState.DOWN:
+            if (keyS.isUp) {
+                bodyState = IsaacState.IDLE;
+            }
+            else if (keyW.isDown) {
+                bodyState = IsaacState.IDLE;
+            }
+            if (keyA.isDown) {
+                player.setVelocityX(-player.speed);
+            }
+            else if (keyD.isDown) {
+                player.setVelocityX(player.speed);
+            }
+            if (keyA.isUp && keyD.isUp || keyA.isDown && keyD.isDown) {
+                player.setVelocityX(0);
+            }
+            if (player.anims.currentAnim.key != 'ver-walk' || !player.anims.isPlaying) {
+                player.anims.play('ver-walk');
+                player.setVelocityY(player.speed);
+                player.head.anims.play('down-shot');
+                player.head.anims.pause(player.head.anims.currentAnim.frames[0]);
+            }
+            break;
+
+        case IsaacState.LEFT:
+            if (keyA.isUp) {
+                bodyState = IsaacState.IDLE;
+            }
+            else if (keyW.isDown && keyS.isUp) {
+                bodyState = IsaacState.UP;
+            }
+            else if (keyS.isDown && keyW.isUp) {
+                bodyState = IsaacState.DOWN;
+            }
+            else if (keyD.isDown) {
+                bodyState = IsaacState.IDLE;
+            }
+            if (player.anims.currentAnim.key != 'hor-walk') {
+                player.anims.play('hor-walk');
+                player.flipX = true;
+                player.setVelocityX(-player.speed);
+                player.head.anims.play('left-shot');
+                player.head.anims.pause(player.head.anims.currentAnim.frames[0]);
+            }
+            break;
+
+        case IsaacState.RIGHT:
+            if (keyD.isUp) {
+                bodyState = IsaacState.IDLE;
+            }
+            else if (keyW.isDown && keyS.isUp) {
+                bodyState = IsaacState.UP;
+            }
+            else if (keyS.isDown && keyW.isUp) {
+                bodyState = IsaacState.DOWN;
+            }
+            else if (keyA.isDown) {
+                bodyState = IsaacState.IDLE;
+            }
+            if (player.anims.currentAnim.key != 'hor-walk') {
+                player.anims.play('hor-walk');
+                player.flipX = false;
+                player.setVelocityX(player.speed);
+                player.head.anims.play('right-shot');
+                player.head.anims.pause(player.head.anims.currentAnim.frames[0]);
+            }
+            break;
+
+        default:
+            bodyState = IsaacState.IDLE;
+    }
+}
+
+function UpdatePlayerShooting() {
+
+    switch (headState) {
+
+        case IsaacState.IDLE:
+            if (keyUp.isDown) {
+                headState = IsaacState.UP;
+            }
+            else if (keyDown.isDown) {
+                headState = IsaacState.DOWN;
+            }
+            else if (keyLeft.isDown) {
+                headState = IsaacState.LEFT;
+            }
+            else if (keyRight.isDown) {
+                headState = IsaacState.RIGHT;
+            }
+            if (bodyState == IsaacState.IDLE || bodyState == IsaacState.DOWN) {
+                player.head.anims.play('down-shot');
+                player.head.anims.pause(player.head.anims.currentAnim.frames[0]);
+            }
+            else if (bodyState == IsaacState.UP) {
+                player.head.anims.play('up-shot');
+                player.head.anims.pause(player.head.anims.currentAnim.frames[0]);
+            }
+            else if (bodyState == IsaacState.LEFT) {
+                player.head.anims.play('left-shot');
+                player.head.anims.pause(player.head.anims.currentAnim.frames[0]);
+            }
+            else if (bodyState == IsaacState.RIGHT) {
+                player.head.anims.play('right-shot');
+                player.head.anims.pause(player.head.anims.currentAnim.frames[0]);
+            }
+            break;
+
+        case IsaacState.UP:
+            if (keyUp.isUp) {
+                headState = IsaacState.IDLE;
+            }
+            else if (keyDown.isDown && !prevShotDown) {
+                headState = IsaacState.DOWN;
+            }
+            else if (keyLeft.isDown && !prevShotLeft) {
+                headState = IsaacState.LEFT;
+            }
+            else if (keyRight.isDown && !prevShotRight) {
+                headState = IsaacState.RIGHT;
+            }
+            if (player.head.anims.currentAnim.key != 'up-shot' || !player.head.anims.isPlaying) {
+                player.head.anims.play('up-shot');
+                prevShootUp = true;
+            }
+            break;
+
+        case IsaacState.DOWN:
+            if (keyUp.isDown && !prevShotUp) {
+                headState = IsaacState.UP;
+            }
+            else if (keyDown.isUp) {
+                headState = IsaacState.IDLE;
+            }
+            else if (keyLeft.isDown && !prevShotLeft) {
+                headState = IsaacState.LEFT;
+            }
+            else if (keyRight.isDown && !prevShotRight) {
+                headState = IsaacState.RIGHT;
+            }
+            if (player.head.anims.currentAnim.key != 'down-shot' || !player.head.anims.isPlaying) {
+                player.head.anims.play('down-shot');
+                prevShotDown = true;
+            }
+            break;
+
+        case IsaacState.LEFT:
+            if (keyUp.isDown && !prevShotUp) {
+                headState = IsaacState.UP;
+            }
+            else if (keyDown.isDown && !prevShotDown) {
+                headState = IsaacState.DOWN;
+            }
+            else if (keyLeft.isUp) {
+                headState = IsaacState.IDLE;
+            }
+            else if (keyRight.isDown && !prevShotRight) {
+                headState = IsaacState.RIGHT;
+            }
+            if (player.head.anims.currentAnim.key != 'left-shot' || !player.head.anims.isPlaying) {
+                player.head.anims.play('left-shot');
+                prevShotLeft = true;
+            }
+            break;
+
+        case IsaacState.RIGHT:
+            if (keyUp.isDown && !prevShotUp) {
+                headState = IsaacState.UP;
+            }
+            else if (keyDown.isDown && !prevShotDown) {
+                headState = IsaacState.DOWN;
+            }
+            else if (keyLeft.isDown && !prevShotLeft) {
+                headState = IsaacState.LEFT;
+            }
+            else if (keyRight.isUp) {
+                headState = IsaacState.IDLE;
+            }
+            if (player.head.anims.currentAnim.key != 'right-shot' || !player.head.anims.isPlaying) {
+                player.head.anims.play('right-shot');
+                prevShotRight = true;
+            }
+            break;
+
+        default:
+            bodyState = IsaacState.IDLE;
+    }
+}
+
+function UpdatePrevShotInputs() {
+
+        if(prevShotUp)
+        {
+            if(keyUp.isUp)
+            {
+                prevShotUp = false;
+            }
+        }
+        if(prevShotDown)
+        {
+            if(keyDown.isDown)
+            {
+                prevShotDown = false;
+            }
+        }
+        if(prevShotLeft)
+        {
+            if(keyLeft.isLeft)
+            {
+                prevShotLeft = false;
+            }
+        }
+        if(prevShotRight)
+        {
+            if(keyRight.isRight)
+            {
+                prevShotRight = false;
+            }
+        }
 }
 
 /*
