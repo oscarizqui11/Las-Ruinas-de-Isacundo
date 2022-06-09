@@ -1,4 +1,12 @@
 { "compressionlevel":-1,
+ "editorsettings":
+    {
+     "export":
+        {
+         "format":"json",
+         "target":"Caves.json"
+        }
+    },
  "height":7,
  "infinite":false,
  "layers":[
@@ -37,8 +45,26 @@
          "width":10,
          "x":0,
          "y":0
+        }, 
+        {
+         "data":[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 11, 0, 0, 0, 0,
+            0, 0, 0, 11, 0, 0, 11, 0, 0, 0,
+            0, 0, 0, 0, 11, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         "height":7,
+         "id":4,
+         "name":"Rocas",
+         "opacity":1,
+         "type":"tilelayer",
+         "visible":true,
+         "width":10,
+         "x":0,
+         "y":0
         }],
- "nextlayerid":3,
+ "nextlayerid":5,
  "nextobjectid":1,
  "orientation":"orthogonal",
  "renderorder":"right-down",
@@ -154,7 +180,7 @@
                         {
                          "name":"collides",
                          "type":"bool",
-                         "value":false
+                         "value":true
                         }]
                 }, 
                 {
@@ -3005,6 +3031,42 @@
                          "value":false
                         }]
                 }],
+         "tilewidth":52
+        }, 
+        {
+         "columns":1,
+         "firstgid":325,
+         "image":"C:\/Users\/Usuari\/Desktop\/Sin t\u00edtulo-1.png",
+         "imageheight":52,
+         "imagewidth":52,
+         "margin":0,
+         "name":"Rocas",
+         "spacing":0,
+         "tilecount":1,
+         "tileheight":52,
+         "tiles":[
+                {
+                 "id":0,
+                 "properties":[
+                        {
+                         "name":"collides",
+                         "type":"bool",
+                         "value":true
+                        }]
+                }],
+         "tilewidth":52
+        }, 
+        {
+         "columns":36,
+         "firstgid":326,
+         "image":"C:\/Users\/Usuari\/Desktop\/146181.png",
+         "imageheight":468,
+         "imagewidth":1892,
+         "margin":0,
+         "name":"146181",
+         "spacing":0,
+         "tilecount":324,
+         "tileheight":52,
          "tilewidth":52
         }],
  "tilewidth":52,

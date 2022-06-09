@@ -30,9 +30,10 @@ class IsaacState {
 }
 
 var game = new Phaser.Game(config);
-var time = 0;
 var bodyState = IsaacState.IDLE;
 var headState = IsaacState.IDLE;
+var timer = 0;
+var delay = 0.3;
 
 var prevShotUp = false;
 var prevShotDown = false;
@@ -49,11 +50,14 @@ function preload() {
     this.load.image('plasma', 'assets/Plasma.png'); */
 
     this.load.image('tiles', 'assets/caves.png');
+    this.load.image('Caca', 'assets/caca.png');
+    this.load.image('Boss', 'assets/cacaBoss.png');
     this.load.tilemapTiledJSON('cuevas', 'assets/Caves.json');
     this.load.spritesheet('IsaacHead', './assets/IsaacHead.png', { frameWidth: 28, frameHeigth: 28 });
     this.load.spritesheet('IsaacBodyVer', './assets/IsaacBodyVer.png', { frameWidth: 18, frameHeigth: 18 });
     this.load.spritesheet('IsaacBodyHor', './assets/IsaacBodyHor.png', { frameWidth: 18, frameHeigth: 18 });
     this.load.image('Tear', './assets/tear.png');
+    
 }
 
 function create() {
@@ -66,16 +70,19 @@ function create() {
     GenerateEnemy.call(this);*/
     //this.input.on('pointerdown', treatClick);
 
-
+    CacaList = this.add.group();
+    
     SetKeys.call(this);
 
     // CREACION DE LA SALA
 
     const map = this.make.tilemap({ key: "cuevas", tileWidth: 52, tileHeight: 52 });
     const tileset = map.addTilesetImage('146181', 'tiles');
+    
 
     layerGround = map.createLayer('Ground', tileset);
     layerWalls = map.createLayer('Walls', tileset);
+    layerRocas = map.createLayer('Rocas', tileset);
 
     layerGround.scaleX = 2;
     layerWalls.scaleX = 2;
@@ -83,36 +90,50 @@ function create() {
     layerWalls.scaleY = 2;
 
     layerWalls.setCollisionByProperty({collides: true});
+    layerRocas.setCollisionByProperty({collides: true});
     tearsList = this.physics.add.group();
+    enemyTearsList = this.physics.add.group();
 
     this.physics.add.collider(
         layerWalls,
+        layerRocas,
         this.player
     );
 
     this.physics.add.overlap(tearsList, layerWalls, bulletCollide, null, this);
+    this.physics.add.overlap(tearsList, layerRocas, bulletCollide, null, this);
+    this.physics.add.overlap(tearsList, CacaList, hitEnemy, null, this);
+    
+
+    
+    
+    
+    
 
     //CREACION DEL ISAAC
 
 
-    console.log(this.physics.add);
+    
 
     player = this.physics.add;
 
 
     player = this.physics.add.sprite(300, 450, 'IsaacBodyVer');
+    
     player.body.setSize(18, 14);
     player.body.offset.y = -1;
-
+    player.hp=3
     player.head = player.scene.add.sprite(player.x, player.y - 30, 'IsaacHead');
-    console.log(player.head);
-
-    player.speed = 180;
+   
+    this.physics.add.overlap(enemyTearsList, player, hitPlayer, null, this);
+    player.speed = 200;
 
     player.scaleX = 2;
     player.scaleY = 2;
     player.head.scaleX = player.scaleX;
     player.head.scaleY = player.scaleY;
+    
+    this.physics.add.overlap(enemyTearsList, player, hitEnemy, null, this);
 
     this.anims.create({
         key: 'ver-walk',
@@ -160,17 +181,73 @@ function create() {
 
     resetIsaacAnims();
 
+    function CreateEnemy(positionX, positionY,objective, physics)
+    {
+   
+        caca = physics.add.sprite(0,0, 'Caca');
+        caca.setOrigin(0.5,0.5);
+        caca.vel = 150;
+        caca.delay=1
+        caca.timer=0;
+        caca.objective = objective;
+        caca.x=positionX;
+        caca.y=positionY;
+        caca.hp=3
+        
+        caca.caca=caca
+        this.CacaList.add(caca);
+    }
+
+    function CreateBoss(positionX, positionY,objective, physics)
+    {
+   
+        caca = physics.add.sprite(0,0, 'Boss');
+        caca.setOrigin(0.5,0.5);
+        caca.vel = 150;
+        caca.delay=1
+        caca.timer=0;
+        caca.objective = objective;
+        caca.x=positionX;
+        caca.y=positionY;
+        caca.hp=10
+        
+        caca.caca=caca
+        this.CacaList.add(caca);
+    }
+
+    CreateEnemy(100,200,player, this.physics);
+    CreateEnemy(300,200,player, this.physics);
+    CreateEnemy(400,200,player, this.physics);
+    CreateBoss(500,100,player,this.physics);
+    //CreateEnemy(200,500,player, this.physics);
+    //CreateEnemy(400,100,player, this.physics);
+
 }
 
-function update() {
+
+
+function update(time,delta) {
+
+
+    timer += (1*delta)/1000;
+    
 
     this.physics.collide(player, layerWalls);
+    this.physics.collide(player, layerRocas);
 
     UpdatePlayerMovement();
     UpdatePrevShotInputs();
     UpdatePlayerShooting();
+    
+    for( var i=0; i<CacaList.getChildren().length; i++){
+       
+        CacaList.getChildren()[i].caca.timer+=(1*delta)/1000;
+        
+    }
 
     MoveShots.call(this);
+    MoveEnemies.call(this);
+    ShootEnemies.call(this)
 
     //console.log(bodyState);
 
@@ -187,8 +264,36 @@ function update() {
 
     //MoveEnemies.call(this);
     //MoveShots.call(this);
+   
+
+    if (keyUp.isDown || keyDown.isDown || keyRight.isDown || keyLeft.isDown)
+    {
+        this.time = this.time + delay / 1000.0;
+        if (this.time >= delay)
+        {
+            this.time = 0;
+            if (keyUp.isDown)
+            {
+                return this.tearshoot(1);
+            }
+            else if (keyDown.isDown)
+            {
+                return Shoot(player.head, new Phaser.Math.Vector2(0, 1), 400);
+            }
+            else if (keyRight.isDown)
+            {
+                return this.tearshoot(3);
+            }
+            else if (keyLeft.isDown)
+            {
+                return this.tearshoot(4);
+            }
+        }
+    }
+    return undefined;
 
 }
+
 
 function SetKeys() {
     keyW = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
@@ -336,6 +441,7 @@ function UpdatePlayerMovement() {
         default:
             bodyState = IsaacState.IDLE;
     }
+   
 }
 
 function UpdatePlayerShooting() {
@@ -345,6 +451,7 @@ function UpdatePlayerShooting() {
         case IsaacState.IDLE:
             if (keyUp.isDown) {
                 headState = IsaacState.UP;
+                //timer = game.time.create(1000, false);timer.add(3000);timer.onEvent.add(doSomething, this);timer.start();
             }
             else if (keyDown.isDown) {
                 headState = IsaacState.DOWN;
@@ -390,10 +497,15 @@ function UpdatePlayerShooting() {
                 player.head.anims.play('up-shot');
                 prevShootUp = true;
             }
-            console.log(this.physics);
-            //tear = this.physics.add.image(player.head.x, player.head.y, 'Tear');
-            //this.tearsList.add(tear);
-            Shoot(player.head, new Phaser.Math.Vector2(0, -1), 400);
+           
+            
+            if(timer>delay)
+            {
+                Shoot(player.head, new Phaser.Math.Vector2(0, -1), 400);
+                timer = 0;
+            }
+            
+            
             break;
 
         case IsaacState.DOWN:
@@ -413,7 +525,14 @@ function UpdatePlayerShooting() {
                 player.head.anims.play('down-shot');
                 prevShotDown = true;
             }
-            Shoot(player.head, new Phaser.Math.Vector2(0, 1), 400);
+            
+            
+            if(timer>delay)
+            {
+                Shoot(player.head, new Phaser.Math.Vector2(0, 1), 400);
+                timer = 0;
+            }
+            
             break;
 
         case IsaacState.LEFT:
@@ -433,8 +552,13 @@ function UpdatePlayerShooting() {
                 player.head.anims.play('left-shot');
                 prevShotLeft = true;
             }
-            Shoot(player.head, new Phaser.Math.Vector2(-1, 0), 400);
+            if(timer>delay)
+            {
+                Shoot(player.head, new Phaser.Math.Vector2(-1, 0), 400);
+                timer = 0;
+            }
             break;
+           
 
         case IsaacState.RIGHT:
             if (keyUp.isDown && !prevShotUp) {
@@ -453,7 +577,12 @@ function UpdatePlayerShooting() {
                 player.head.anims.play('right-shot');
                 prevShotRight = true;
             }
-            Shoot(player.head, new Phaser.Math.Vector2(1, 0), 400);
+            if(timer>delay)
+            {
+                Shoot(player.head, new Phaser.Math.Vector2(1, 0), 400);
+                timer = 0;
+            }
+           
             break;
 
         default:
@@ -487,12 +616,26 @@ function UpdatePrevShotInputs() {
 
 function Shoot(shooter, dir, vel) {
     lloro = tearsList.create(shooter.x, shooter.y, 'Tear');
+    console.log(lloro)
     lloro.dir = dir;
     lloro.vel = vel;
+    lloro.dmg=1
+    //timer = game.time.create(1000, false);timer.add(3000);timer.onEvent.add(doSomething, this);timer.start();
+}
+
+function EnemyShoot(shooter, dir, vel) {
+    
+    lloro = enemyTearsList.create(shooter.x, shooter.y, 'Tear');
+    console.log(lloro)
+    lloro.dir = dir;
+    lloro.vel = vel;
+    lloro.dmg=1
+    //timer = game.time.create(1000, false);timer.add(3000);timer.onEvent.add(doSomething, this);timer.start();
 }
 
 function MoveShots() {
     Phaser.Actions.Call(tearsList.getChildren(), MoveShot);
+    Phaser.Actions.Call(enemyTearsList.getChildren(), MoveShot);
 }
 
 function MoveShot(shot) {
@@ -500,11 +643,71 @@ function MoveShot(shot) {
     shot.body.setVelocityY(shot.dir.y * shot.vel);    
 }
 
+function MoveEnemies() {
+    Phaser.Actions.Call(CacaList.getChildren(), MoveEnemy)
+}
+
+function MoveEnemy(enemy) {
+
+
+   
+    var dir = new Phaser.Math.Vector2(0,0)
+    dir.x=enemy.caca.objective.x - enemy.caca.x;
+    dir.y=enemy.caca.objective.y -enemy.caca.y;
+    dir.normalize()
+    enemy.body.setVelocityX((dir.x) * enemy.caca.vel);
+    enemy.body.setVelocityY((dir.y ) * enemy.caca.vel);    
+}
+function ShootEnemies() {
+    Phaser.Actions.Call(CacaList.getChildren(), ShootEnemy)
+}
+
+function ShootEnemy(enemy) {
+
+    if(enemy.caca.timer>enemy.caca.delay){
+        
+        enemy.caca.timer=0;
+        var dir = new Phaser.Math.Vector2(0,0)
+        dir.x=enemy.caca.objective.x - enemy.caca.x;
+        dir.y=enemy.caca.objective.y -enemy.caca.y;
+        dir.normalize()
+        EnemyShoot(enemy.caca, dir, 400)    
+    }
+    
+}
+
 function bulletCollide(bullet, wall)
 {
     if(bullet.scene == this && wall.collides)
     {
         tearsList.remove(bullet);
+        bullet.destroy();
+    }
+}
+function hitEnemy(enemy, bullet)
+{
+    if(bullet.scene == this)
+    {
+  
+        enemy.caca.hp-=bullet.dmg
+        if(enemy.caca.hp<=0){
+            CacaList.remove(enemy)
+            enemy.destroy()
+        }
+        tearsList.remove(bullet);
+        bullet.destroy();
+    }
+}
+
+function hitPlayer(player, bullet)
+{
+    if(bullet.scene == this)
+    {
+        player.hp-=bullet.dmg
+        if(player.hp<=0){
+            this.scene.restart()
+        }
+        enemyTearsList.remove(bullet);
         bullet.destroy();
     }
 }
