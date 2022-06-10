@@ -25,6 +25,7 @@ var prevShotRight = false;
 var layerGround;
 var layerWalls;
 var tearsList;
+var vidasList;
 var player;
 
 var CacaList;
@@ -33,36 +34,42 @@ var enemyTearsList;
 var hitEnemy;
 var hitPlayer;
 var caca;
-var timer;
-var delay;
+var timer = 0;
+var delay = 1;
+
+var HeartsList;
 
 class OscarScene extends Phaser.Scene {
-    
+
     preload() {
-        
+
         /* this.load.image('ground', 'assets/background-1.png');
         this.load.svg('player-car', 'assets/simple-travel-car-top_view.svg');
         this.load.image('player-gun', 'assets/Firing2__000.png');
         this.load.image('enemy', 'assets/Enemy3.png');
         this.load.image('plasma', 'assets/Plasma.png'); */
-        
+
         this.load.image('tiles', 'assets/PC Computer - The Binding of Isaac Rebirth - Basement.png');
         this.load.tilemapTiledJSON('basement', 'assets/Basement-18-2.json');
+        this.load.image('Boss', 'assets/cacaBoss.png');
+        this.load.image('Corason', 'assets/Heart.png');
+        this.load.image('Vivo', 'assets/FullHeartUI.png');
+        this.load.image('Muelto', 'assets/EmptyHeartUI.png');
         this.load.spritesheet('IsaacHead', './assets/IsaacHead.png', { frameWidth: 28, frameHeigth: 28 });
         this.load.spritesheet('IsaacBodyVer', './assets/IsaacBodyVer.png', { frameWidth: 18, frameHeigth: 18 });
         this.load.spritesheet('IsaacBodyHor', './assets/IsaacBodyHor.png', { frameWidth: 18, frameHeigth: 18 });
         this.load.image('Tear', './assets/tear.png');
     }
-    
+
     create() {
 
         this.input.once('pointerdown', function () {
-        
+
             console.log("cambio de escena")
             this.scene.add('alberto-scene', AlbertoScene, true, { x: 400, y: 300 });
 
         }, this);
-        
+
         /* enemyList = this.add.group();
         shotsList = this.add.group();
         
@@ -70,54 +77,65 @@ class OscarScene extends Phaser.Scene {
         CreateCar.call(this);
         GenerateEnemy.call(this);*/
         //this.input.on('pointerdown', treatClick);
-        
-        
+
+
         SetKeys.call(this);
 
         // CREACION DE LA SALA
-        
+
         const map = this.make.tilemap({ key: "basement", tileWidth: 52, tileHeight: 52 });
         const tileset = map.addTilesetImage('PC Computer - The Binding of Isaac Rebirth - Basement', 'tiles');
-        
+
         layerGround = map.createLayer('Ground', tileset);
         layerWalls = map.createLayer('Walls', tileset);
-        
+
         layerGround.scaleX = 2;
         layerWalls.scaleX = 2;
         layerGround.scaleY = 2;
         layerWalls.scaleY = 2;
-        
+
         layerWalls.setCollisionByProperty({ collides: true });
         tearsList = this.physics.add.group();
-        
+        vidasList = this.physics.add.group();
+        CacaList = this.add.group();
+        HeartsList = this.add.group();        
+        enemyTearsList = this.physics.add.group();
+
         this.physics.add.collider(
             layerWalls,
             this.player
-            );
-            
-            this.physics.add.overlap(tearsList, layerWalls, bulletCollide, null, this);
-            
-            //CREACION DEL ISAAC
-            
-            
-            console.log(this.physics.add);
-            
-            player = this.physics.add;
-            
-            
-            player = this.physics.add.sprite(300, 450, 'IsaacBodyVer');
-            player.body.setSize(18, 14);
-            player.body.offset.y = -1;
-            
-            player.head = player.scene.add.sprite(player.x, player.y - 30, 'IsaacHead');
-            console.log(player.head);
-            
-            player.speed = 180;
-            
-            player.scaleX = 2;
-            player.scaleY = 2;
+        );
+
+        this.physics.add.overlap(tearsList, layerWalls, bulletCollide, null, this);
+
+        this.physics.add.overlap(tearsList, CacaList, hitEnemy, null, this);
+        
+
+        
+        //CREACION DEL ISAAC
+        
+        
+        console.log(this.physics.add);
+        
+        player = this.physics.add;
+        
+        
+        player = this.physics.add.sprite(300, 450, 'IsaacBodyVer');
+        player.body.setSize(18, 14);
+        player.body.offset.y = -1;
+        
+        player.head = player.scene.add.sprite(player.x, player.y - 30, 'IsaacHead');
+        console.log(player.head);
+        
+        player.speed = 180;
+        
+        player.scaleX = 2;
+        player.scaleY = 2;
         player.head.scaleX = player.scaleX;
         player.head.scaleY = player.scaleY;
+
+        player.hp = 2;
+        player.maxHp = 3;
         
         this.anims.create({
             key: 'ver-walk',
@@ -131,7 +149,7 @@ class OscarScene extends Phaser.Scene {
             frameRate: 10,
             repeat: -1
         });
-        
+
         this.anims.create({
             key: 'down-shot',
             frames: this.anims.generateFrameNumbers('IsaacHead', { start: 0, end: 1 }),
@@ -163,36 +181,54 @@ class OscarScene extends Phaser.Scene {
             frameRate: 2
         });
         
+        this.physics.add.overlap(player, HeartsList, recoverHP, null, this);
+        this.physics.add.overlap(enemyTearsList, player, hitPlayer, null, this);
+
         resetIsaacAnims();
+
+        UpdateUI();
+        
+        //CreateEnemy(100, 200, this.physics);
+        CreateBoss(500, 100, player, this.physics);
         
     }
     
-    update() {
+    update(time, delta) {
+
+        timer += (1 * delta) / 1000;
 
         this.physics.collide(player, layerWalls);
 
         UpdatePlayerMovement();
         UpdatePrevShotInputs();
         UpdatePlayerShooting();
-        
+
+        for (var i = 0; i < CacaList.getChildren().length; i++) {
+
+            CacaList.getChildren()[i].caca.timer += (1 * delta) / 1000;
+
+        }
+
         MoveShots.call(this);
+        MoveEnemies.call(this);
+        ShootEnemies.call(this);
 
         //console.log(bodyState);
-        
+
         if (keySpace.isDown) {
             //Shoot.call(this);
         }
-        
+
         player.head.x = player.x;
         player.head.y = player.y - 30;
-        
+
         /* if (time >= 60) {
             time = 0;
         } */
-        
+
         //MoveEnemies.call(this);
         //MoveShots.call(this);
-        
+
     }
 }
 
@@ -204,7 +240,7 @@ class AlbertoScene extends Phaser.Scene {
         this.load.image('player-gun', 'assets/Firing2__000.png');
         this.load.image('enemy', 'assets/Enemy3.png');
         this.load.image('plasma', 'assets/Plasma.png'); */
-    
+
         this.load.image('tiles-cuevas', 'assets/caves.png');
         this.load.image('Caca', 'assets/caca.png');
         this.load.image('Boss', 'assets/cacaBoss.png');
@@ -213,11 +249,11 @@ class AlbertoScene extends Phaser.Scene {
         this.load.spritesheet('IsaacBodyVer', './assets/IsaacBodyVer.png', { frameWidth: 18, frameHeigth: 18 });
         this.load.spritesheet('IsaacBodyHor', './assets/IsaacBodyHor.png', { frameWidth: 18, frameHeigth: 18 });
         this.load.image('Tear', './assets/tear.png');
-        
+
     }
-    
+
     create() {
-    
+
         /* enemyList = this.add.group();
         shotsList = this.add.group();
     
@@ -225,72 +261,64 @@ class AlbertoScene extends Phaser.Scene {
         CreateCar.call(this);
         GenerateEnemy.call(this);*/
         //this.input.on('pointerdown', treatClick);
-    
+
         CacaList = this.add.group();
-        
+
         SetKeys.call(this);
-    
+
         // CREACION DE LA SALA
-    
+
         const map = this.make.tilemap({ key: "cuevas", tileWidth: 52, tileHeight: 52 });
         const tileset = map.addTilesetImage('146181', 'tiles-cuevas');
-        
-    
+
+
         layerGround = map.createLayer('Ground', tileset);
         layerWalls = map.createLayer('Walls', tileset);
         layerRocas = map.createLayer('Rocas', tileset);
-    
+
         layerGround.scaleX = 2;
         layerWalls.scaleX = 2;
         layerGround.scaleY = 2;
         layerWalls.scaleY = 2;
-    
-        layerWalls.setCollisionByProperty({collides: true});
-        layerRocas.setCollisionByProperty({collides: true});
+
+        layerWalls.setCollisionByProperty({ collides: true });
+        layerRocas.setCollisionByProperty({ collides: true });
         tearsList = this.physics.add.group();
+        vidasList = this.physics.add.group();
         enemyTearsList = this.physics.add.group();
-    
+
         this.physics.add.collider(
             layerWalls,
             layerRocas,
             this.player
         );
-    
+
         this.physics.add.overlap(tearsList, layerWalls, bulletCollide, null, this);
         this.physics.add.overlap(tearsList, layerRocas, bulletCollide, null, this);
         this.physics.add.overlap(tearsList, CacaList, hitEnemy, null, this);
-        
-    
-        
-        
-        
-        
-    
+
         //CREACION DEL ISAAC
-    
-    
-        
-    
+
         player = this.physics.add;
-    
-    
+
+
         player = this.physics.add.sprite(300, 450, 'IsaacBodyVer');
-        
+
         player.body.setSize(18, 14);
         player.body.offset.y = -1;
-        player.hp=3
         player.head = player.scene.add.sprite(player.x, player.y - 30, 'IsaacHead');
-       
+
         this.physics.add.overlap(enemyTearsList, player, hitPlayer, null, this);
         player.speed = 200;
-    
+
         player.scaleX = 2;
         player.scaleY = 2;
         player.head.scaleX = player.scaleX;
         player.head.scaleY = player.scaleY;
-        
-        this.physics.add.overlap(enemyTearsList, player, hitEnemy, null, this);
-    
+
+        player.hp = 2;
+        player.maxHp = 3;
+
         this.anims.create({
             key: 'ver-walk',
             frames: this.anims.generateFrameNumbers('IsaacBodyVer', { start: 0, end: 9 }),
@@ -303,7 +331,7 @@ class AlbertoScene extends Phaser.Scene {
             frameRate: 10,
             repeat: -1
         });
-    
+
         this.anims.create({
             key: 'down-shot',
             frames: this.anims.generateFrameNumbers('IsaacHead', { start: 0, end: 1 }),
@@ -328,126 +356,62 @@ class AlbertoScene extends Phaser.Scene {
             frameRate: 2,
             repeat: -1
         });
-    
+
         this.anims.create({
             key: 'turn',
             frames: [{ key: 'IsaacHead', frame: 1 }],
             frameRate: 2
         });
-    
+
+        this.physics.add.overlap(player, HeartsList, recoverHP, null, this);
+
         resetIsaacAnims();
-    
-        function CreateEnemy(positionX, positionY,objective, physics)
-        {
-       
-            caca = physics.add.sprite(0,0, 'Caca');
-            caca.setOrigin(0.5,0.5);
-            caca.vel = 150;
-            caca.delay=1
-            caca.timer=0;
-            caca.objective = objective;
-            caca.x=positionX;
-            caca.y=positionY;
-            caca.hp=3
-            
-            caca.caca=caca
-            CacaList.add(caca);
-        }
-    
-        function CreateBoss(positionX, positionY,objective, physics)
-        {
-       
-            caca = physics.add.sprite(0,0, 'Boss');
-            caca.setOrigin(0.5,0.5);
-            caca.vel = 150;
-            caca.delay=1
-            caca.timer=0;
-            caca.objective = objective;
-            caca.x=positionX;
-            caca.y=positionY;
-            caca.hp=10
-            
-            caca.caca=caca
-            CacaList.add(caca);
-        }
-    
-        CreateEnemy(100,200,player, this.physics);
-        CreateEnemy(300,200,player, this.physics);
-        CreateEnemy(400,200,player, this.physics);
-        CreateBoss(500,100,player,this.physics);
+        
+        UpdateUI();
+
+        CreateEnemy(100, 200, player, this.physics);
+        CreateEnemy(300, 200, player, this.physics);
+        CreateEnemy(400, 200, player, this.physics);
+        CreateBoss(500, 100, player, this.physics);
         //CreateEnemy(200,500,player, this.physics);
         //CreateEnemy(400,100,player, this.physics);
-    
+
     }
-    
-    
-    
-    update(time,delta) {
-    
-    
-        timer += (1*delta)/1000;
-        
-    
+
+
+
+    update(time, delta) {
+
+
+        timer += (1 * delta) / 1000;
+
+
         this.physics.collide(player, layerWalls);
         this.physics.collide(player, layerRocas);
-    
+
         UpdatePlayerMovement();
         UpdatePrevShotInputs();
         UpdatePlayerShooting();
-        
-        for( var i=0; i<CacaList.getChildren().length; i++){
-           
-            CacaList.getChildren()[i].caca.timer+=(1*delta)/1000;
-            
+
+        for (var i = 0; i < CacaList.getChildren().length; i++) {
+
+            CacaList.getChildren()[i].caca.timer += (1 * delta) / 1000;
+
         }
-    
+
         MoveShots.call(this);
         MoveEnemies.call(this);
-        ShootEnemies.call(this)
-    
+        ShootEnemies.call(this);
+
         //console.log(bodyState);
-    
+
         if (keySpace.isDown) {
             //Shoot.call(this);
         }
-    
+
         player.head.x = player.x;
         player.head.y = player.y - 30;
-    
-        /* if (time >= 60) {
-            time = 0;
-        } */
-    
-        //MoveEnemies.call(this);
-        //MoveShots.call(this);
-       
-    
-        if (keyUp.isDown || keyDown.isDown || keyRight.isDown || keyLeft.isDown)
-        {
-            this.time = this.time + delay / 1000.0;
-            if (this.time >= delay)
-            {
-                this.time = 0;
-                if (keyUp.isDown)
-                {
-                    return this.tearshoot(1);
-                }
-                else if (keyDown.isDown)
-                {
-                    return Shoot(player.head, new Phaser.Math.Vector2(0, 1), 400);
-                }
-                else if (keyRight.isDown)
-                {
-                    return this.tearshoot(3);
-                }
-                else if (keyLeft.isDown)
-                {
-                    return this.tearshoot(4);
-                }
-            }
-        }
-        return undefined;
-    
+
     }
 }
 
@@ -459,14 +423,12 @@ var config = {
         default: 'arcade',
         arcade: {
             gravity: { y: 0 },
-            debug: true,
         }
     },
     scene: OscarScene
 };
 
 var game = new Phaser.Game(config);
-
 
 function SetKeys() {
     keyW = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
@@ -668,10 +630,10 @@ function UpdatePlayerShooting() {
                 player.head.anims.play('up-shot');
                 prevShootUp = true;
             }
-            console.log(this.physics);
-            //tear = this.physics.add.image(player.head.x, player.head.y, 'Tear');
-            //this.tearsList.add(tear);
-            Shoot(player.head, new Phaser.Math.Vector2(0, -1), 400);
+            if (timer > delay) {
+                Shoot(player.head, new Phaser.Math.Vector2(0, -1), 400);
+                timer = 0;
+            }
             break;
 
         case IsaacState.DOWN:
@@ -691,7 +653,10 @@ function UpdatePlayerShooting() {
                 player.head.anims.play('down-shot');
                 prevShotDown = true;
             }
-            Shoot(player.head, new Phaser.Math.Vector2(0, 1), 400);
+            if (timer > delay) {
+                Shoot(player.head, new Phaser.Math.Vector2(0, 1), 400);
+                timer = 0;
+            }
             break;
 
         case IsaacState.LEFT:
@@ -711,7 +676,10 @@ function UpdatePlayerShooting() {
                 player.head.anims.play('left-shot');
                 prevShotLeft = true;
             }
-            Shoot(player.head, new Phaser.Math.Vector2(-1, 0), 400);
+            if (timer > delay) {
+                Shoot(player.head, new Phaser.Math.Vector2(-1, 0), 400);
+                timer = 0;
+            }
             break;
 
         case IsaacState.RIGHT:
@@ -731,7 +699,10 @@ function UpdatePlayerShooting() {
                 player.head.anims.play('right-shot');
                 prevShotRight = true;
             }
-            Shoot(player.head, new Phaser.Math.Vector2(1, 0), 400);
+            if (timer > delay) {
+                Shoot(player.head, new Phaser.Math.Vector2(1, 0), 400);
+                timer = 0;
+            }
             break;
 
         default:
@@ -768,28 +739,106 @@ function Shoot(shooter, dir, vel) {
     console.log(lloro)
     lloro.dir = dir;
     lloro.vel = vel;
-    lloro.dmg=1
+    lloro.dmg = 1
     //timer = game.time.create(1000, false);timer.add(3000);timer.onEvent.add(doSomething, this);timer.start();
 }
 
+function UpdateUI(){
+    for(var i = 0; i < player.maxHp; i++)
+    {
+        if(i < player.hp)
+        {
+            vida = vidasList.create(100 + 50 * i, 100, "Vivo");
+            vida.scaleX = 3;
+            vida.scaleY = 3;
+        }
+        else{
+            vida = vidasList.create(100 + 50 * i, 100, "Muelto");
+            vida.scaleX = 3;
+            vida.scaleY = 3;
+        }
+    }
+}
+
 function EnemyShoot(shooter, dir, vel) {
-    
+
     lloro = enemyTearsList.create(shooter.x, shooter.y, 'Tear');
     console.log(lloro)
     lloro.dir = dir;
     lloro.vel = vel;
-    lloro.dmg=1
+    lloro.dmg = 1
     //timer = game.time.create(1000, false);timer.add(3000);timer.onEvent.add(doSomething, this);timer.start();
 }
 
 function MoveShots() {
     Phaser.Actions.Call(tearsList.getChildren(), MoveShot);
-    //Phaser.Actions.Call(enemyTearsList.getChildren(), MoveShot);
+    Phaser.Actions.Call(enemyTearsList.getChildren(), MoveShot);
 }
 
 function MoveShot(shot) {
     shot.body.setVelocityX(shot.dir.x * shot.vel);
-    shot.body.setVelocityY(shot.dir.y * shot.vel);    
+    shot.body.setVelocityY(shot.dir.y * shot.vel);
+}
+
+function CreateHeart(positionX, positionY, physics) {
+
+    cor = physics.add.sprite(0, 0, 'Corason');
+    cor.setOrigin(0.5, 0.5);
+    cor.x = positionX;
+    cor.y = positionY;
+    cor.scaleX = 2;
+    cor.scaleY = 2;
+
+    //caca.caca = caca
+    HeartsList.add(cor);
+}
+
+function recoverHP(player, heart) {
+    console.log("Corason Latino")
+    if(player.hp < player.maxHp)
+    {
+        player.hp++;
+        UpdateUI();
+        HeartsList.remove(heart);
+        heart.destroy();
+    }
+    else{
+        player.hp = player.maxHp;
+    }
+}
+
+function CreateEnemy(positionX, positionY,objective, physics)
+    {   
+        caca = physics.add.sprite(0,0, 'Caca');
+        caca.setOrigin(0.5,0.5);
+        caca.vel = 150;
+        caca.delay=1
+        caca.timer=0;
+        caca.objective = objective;
+        caca.x=positionX;
+        caca.y=positionY;
+        caca.hp=3
+        
+        caca.caca=caca
+        this.CacaList.add(caca);
+    }
+
+function CreateBoss(positionX, positionY, objective, physics) {
+
+    caca = physics.add.sprite(0, 0, 'Boss');
+    caca.setOrigin(0.5, 0.5);
+    caca.vel = 150;
+    caca.delay = 1
+    caca.timer = 0;
+    caca.objective = objective;
+    caca.x = positionX;
+    caca.y = positionY;
+    caca.hp = 3;
+
+    caca.caca = caca
+
+    console.log(caca)
+    CacaList.add(caca);
 }
 
 function MoveEnemies() {
@@ -797,15 +846,12 @@ function MoveEnemies() {
 }
 
 function MoveEnemy(enemy) {
-
-
-   
-    var dir = new Phaser.Math.Vector2(0,0)
-    dir.x=enemy.caca.objective.x - enemy.caca.x;
-    dir.y=enemy.caca.objective.y -enemy.caca.y;
+    var dir = new Phaser.Math.Vector2(0, 0)
+    dir.x = enemy.caca.objective.x - enemy.caca.x;
+    dir.y = enemy.caca.objective.y - enemy.caca.y;
     dir.normalize()
     enemy.body.setVelocityX((dir.x) * enemy.caca.vel);
-    enemy.body.setVelocityY((dir.y ) * enemy.caca.vel);    
+    enemy.body.setVelocityY((dir.y) * enemy.caca.vel);
 }
 function ShootEnemies() {
     Phaser.Actions.Call(CacaList.getChildren(), ShootEnemy)
@@ -813,33 +859,31 @@ function ShootEnemies() {
 
 function ShootEnemy(enemy) {
 
-    if(enemy.caca.timer>enemy.caca.delay){
-        
-        enemy.caca.timer=0;
-        var dir = new Phaser.Math.Vector2(0,0)
-        dir.x=enemy.caca.objective.x - enemy.caca.x;
-        dir.y=enemy.caca.objective.y -enemy.caca.y;
+    if (enemy.caca.timer > enemy.caca.delay) {
+
+        enemy.caca.timer = 0;
+        var dir = new Phaser.Math.Vector2(0, 0)
+        dir.x = enemy.caca.objective.x - enemy.caca.x;
+        dir.y = enemy.caca.objective.y - enemy.caca.y;
         dir.normalize()
-        EnemyShoot(enemy.caca, dir, 400)    
+        EnemyShoot(enemy.caca, dir, 400)
     }
-    
+
 }
 
-function bulletCollide(bullet, wall)
-{
-    if(bullet.scene == this && wall.collides)
-    {
+function bulletCollide(bullet, wall) {
+    if (bullet.scene == this && wall.collides) {
         tearsList.remove(bullet);
         bullet.destroy();
     }
 }
-function hitEnemy(enemy, bullet)
-{
-    if(bullet.scene == this)
-    {
-  
-        enemy.caca.hp-=bullet.dmg
-        if(enemy.caca.hp<=0){
+function hitEnemy(enemy, bullet) {
+    if (bullet.scene == this) {
+
+        enemy.caca.hp -= bullet.dmg
+        if (enemy.caca.hp <= 0) {
+            //DropHeart(enemy, enemy.dir, enemy.vel);
+            CreateHeart(enemy.x, enemy.y, this.physics);
             CacaList.remove(enemy)
             enemy.destroy()
         }
@@ -848,13 +892,13 @@ function hitEnemy(enemy, bullet)
     }
 }
 
-function hitPlayer(player, bullet)
-{
-    if(bullet.scene == this)
-    {
-        player.hp-=bullet.dmg
-        if(player.hp<=0){
+function hitPlayer(player, bullet) {
+    if (bullet.scene == this) {
+        player.hp -= bullet.dmg
+        if (player.hp <= 0) {
             this.scene.restart()
+        }else{
+            UpdateUI();
         }
         enemyTearsList.remove(bullet);
         bullet.destroy();
